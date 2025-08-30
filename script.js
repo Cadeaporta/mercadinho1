@@ -1,269 +1,251 @@
-let clientes = {};
+// Dados em memória (com persistência)
 let produtos = {};
+let clientes = {};
 let vendas = [];
 let itensTemp = [];
+let cpfVendaAtual = null; // ✅ guarda cliente da venda em andamento
 
-// ---------------- Clientes ----------------
-function cadastrarCliente(event) {
-  event.preventDefault();
-  let nome = document.getElementById("nomeCliente").value.trim().toLowerCase();
-  let cpf = document.getElementById("cpfCliente").value.trim();
-  let telefone = document.getElementById("telefoneCliente").value.trim();
-
-  if (!nome) { alert("Digite o nome!"); return; }
-
-  firebase.database().ref("clientes/" + nome).set({ cpf, telefone });
-  event.target.reset();
+// ---------- Persistência com LocalStorage ----------
+function salvarDados() {
+  localStorage.setItem("produtos", JSON.stringify(produtos));
+  localStorage.setItem("clientes", JSON.stringify(clientes));
+  localStorage.setItem("vendas", JSON.stringify(vendas));
 }
 
-function carregarClientes() {
-  firebase.database().ref("clientes").on("value", snap => {
-    clientes = snap.val() || {};
-    atualizarListaClientes();
-  });
+function carregarDados() {
+  produtos = JSON.parse(localStorage.getItem("produtos")) || {};
+  clientes = JSON.parse(localStorage.getItem("clientes")) || {};
+  vendas = JSON.parse(localStorage.getItem("vendas")) || [];
+
+  atualizarProdutos();
+  atualizarClientes();
 }
 
-function atualizarListaClientes() {
-  let lista = document.getElementById("listaClientes");
-  lista.innerHTML = "";
-  for (let nome in clientes) {
-    let c = clientes[nome];
-    let li = document.createElement("li");
-    li.textContent = `${nome} - CPF: ${c.cpf} - Tel: ${c.telefone}`;
-
-    let btn = document.createElement("button");
-    btn.textContent = "❌";
-    btn.classList.add("btn-excluir");
-    btn.onclick = () => {
-      firebase.database().ref("clientes/" + nome).remove();
-    };
-
-    li.appendChild(btn);
-    lista.appendChild(li);
-  }
+// ---------------- Alternar telas ----------------
+function mostrarTela(id) {
+  document.querySelectorAll(".tela").forEach(t => t.classList.add("hidden"));
+  document.getElementById(id).classList.remove("hidden");
 }
 
 // ---------------- Produtos ----------------
-function cadastrarProduto(event) {
-  event.preventDefault();
+document.getElementById("formProduto").addEventListener("submit", e => {
+  e.preventDefault();
   let codigo = document.getElementById("codigoProduto").value.trim();
   let nome = document.getElementById("nomeProduto").value.trim();
   let preco = parseFloat(document.getElementById("precoProduto").value);
-  let qtd = parseInt(document.getElementById("quantidadeProduto").value);
+  let qtd = parseInt(document.getElementById("qtdProduto").value);
 
-  if (!codigo || !nome || isNaN(preco) || isNaN(qtd)) {
-    alert("Preencha todos os campos!");
+  if (produtos[codigo]) {
+    alert("⚠ Já existe um produto com esse código!");
     return;
   }
 
-  firebase.database().ref("produtos/" + codigo).set({ nome, preco, quantidade: qtd });
-  event.target.reset();
-}
+  produtos[codigo] = { nome, preco, quantidade: qtd };
+  atualizarProdutos();
+  salvarDados();
+  e.target.reset();
+});
 
-function carregarProdutos() {
-  firebase.database().ref("produtos").on("value", snap => {
-    produtos = snap.val() || {};
-    atualizarListaProdutos();
-  });
-}
-
-function atualizarListaProdutos() {
-  let lista = document.getElementById("listaProdutos");
-  lista.innerHTML = "";
+function atualizarProdutos() {
+  let tbody = document.getElementById("listaProdutos");
+  tbody.innerHTML = "";
   for (let codigo in produtos) {
     let p = produtos[codigo];
-    let li = document.createElement("li");
-    li.textContent = `${codigo} - ${p.nome} | R$ ${p.preco.toFixed(2)} | Estoque: ${p.quantidade}`;
+    tbody.innerHTML += `<tr>
+      <td>${codigo}</td><td>${p.nome}</td><td>R$ ${p.preco.toFixed(2)}</td><td>${p.quantidade}</td>
+    </tr>`;
+  }
+}
 
-    let btn = document.createElement("button");
-    btn.textContent = "❌";
-    btn.classList.add("btn-excluir");
-    btn.onclick = () => {
-      firebase.database().ref("produtos/" + codigo).remove();
-    };
+// ---------------- Clientes ----------------
+document.getElementById("formCliente").addEventListener("submit", e => {
+  e.preventDefault();
+  let cpf = document.getElementById("cpfCliente").value.trim().toLowerCase();
+  let nome = document.getElementById("nomeCliente").value.trim();
+  let telefone = document.getElementById("telCliente").value.trim();
 
-    li.appendChild(btn);
-    lista.appendChild(li);
+  if (clientes[cpf]) {
+    alert("⚠ Já existe um cliente com esse CPF/ID!");
+    return;
+  }
+
+  clientes[cpf] = { nome, telefone };
+  atualizarClientes();
+  salvarDados();
+  e.target.reset();
+});
+
+function atualizarClientes() {
+  let tbody = document.getElementById("listaClientes");
+  tbody.innerHTML = "";
+  for (let cpf in clientes) {
+    let c = clientes[cpf];
+    tbody.innerHTML += `<tr>
+      <td>${cpf}</td><td>${c.nome}</td><td>${c.telefone}</td>
+    </tr>`;
   }
 }
 
 // ---------------- Vendas ----------------
-function adicionarItem(event) {
-  event.preventDefault();
-  let clienteNome = document.getElementById("cpfVenda").value.trim().toLowerCase();
+document.getElementById("formVenda").addEventListener("submit", e => {
+  e.preventDefault();
+  let cpf = document.getElementById("cpfVenda").value.trim().toLowerCase();
   let codigo = document.getElementById("codigoVenda").value.trim();
   let qtd = parseInt(document.getElementById("qtdVenda").value);
 
-  if (!clienteNome || !codigo || isNaN(qtd)) {
-    alert("Preencha todos os campos!");
+  if (!clientes[cpf]) {
+    alert("⚠ Cliente não encontrado!");
+    return;
+  }
+  if (!produtos[codigo]) {
+    alert("⚠ Produto não encontrado!");
+    return;
+  }
+  if (qtd > produtos[codigo].quantidade) {
+    alert("⚠ Estoque insuficiente!");
     return;
   }
 
-  if (!clientes[clienteNome]) {
-    alert("Cliente não encontrado!");
-    return;
+  if (!cpfVendaAtual) {
+    cpfVendaAtual = cpf;
   }
 
-  if (!produtos[codigo] || produtos[codigo].quantidade < qtd) {
-    alert("Produto indisponível!");
-    return;
-  }
-
-  let subtotal = produtos[codigo].preco * qtd;
-  itensTemp.push({ codigo, produto: produtos[codigo].nome, quantidade: qtd, subtotal });
-
+  produtos[codigo].quantidade -= qtd;
+  itensTemp.push({ produto: produtos[codigo].nome, quantidade: qtd, subtotal: qtd * produtos[codigo].preco });
+  atualizarProdutos();
   atualizarItensVenda();
-
-  document.getElementById("codigoVenda").value = "";
-  document.getElementById("qtdVenda").value = "";
-}
+  e.target.reset();
+});
 
 function atualizarItensVenda() {
-  let lista = document.getElementById("itensVenda");
-  lista.innerHTML = "";
-  itensTemp.forEach(i => {
-    let li = document.createElement("li");
-    li.textContent = `${i.produto} - ${i.quantidade}x - R$ ${i.subtotal.toFixed(2)}`;
-    lista.appendChild(li);
+  let ul = document.getElementById("itensVenda");
+  ul.innerHTML = "";
+  itensTemp.forEach(item => {
+    ul.innerHTML += `<li>${item.produto} x${item.quantidade} = R$ ${item.subtotal.toFixed(2)}</li>`;
   });
 }
 
 function finalizarVenda() {
   if (itensTemp.length === 0) {
-    alert("Nenhum item!");
+    alert("⚠ Nenhum item na venda!");
     return;
   }
-
-  let clienteNome = document.getElementById("cpfVenda").value.trim().toLowerCase();
-  if (!clientes[clienteNome]) {
-    alert("Cliente não encontrado!");
+  if (!cpfVendaAtual || !clientes[cpfVendaAtual]) {
+    alert("⚠ Cliente não encontrado!");
     return;
   }
 
   let total = itensTemp.reduce((s, i) => s + i.subtotal, 0);
-  let hoje = new Date();
-  let dataStr = hoje.toISOString().split("T")[0];
+  vendas.push({ cliente: clientes[cpfVendaAtual].nome, itens: [...itensTemp], total });
 
-  let novaVenda = { cliente: clienteNome, itens: itensTemp, total, data: dataStr };
-
-  firebase.database().ref("vendas").push(novaVenda);
-
-  itensTemp.forEach(i => {
-    let refProd = firebase.database().ref("produtos/" + i.codigo + "/quantidade");
-    refProd.transaction(q => (q || 0) - i.quantidade);
-  });
+  salvarDados(); // ✅ agora só salva aqui
 
   itensTemp = [];
-  atualizarItensVenda();
-  alert("✅ Venda finalizada!");
-}
-
-function carregarVendas() {
-  firebase.database().ref("vendas").on("value", snap => {
-    vendas = [];
-    snap.forEach(child => vendas.push(child.val()));
-    atualizarListaVendas();
-  });
-}
-
-function atualizarListaVendas() {
-  let lista = document.getElementById("listaVendas");
-  lista.innerHTML = "";
-  vendas.forEach(v => {
-    let li = document.createElement("li");
-    li.textContent = `${v.data} - ${v.cliente} - Total: R$ ${v.total.toFixed(2)}`;
-    lista.appendChild(li);
-  });
+  cpfVendaAtual = null;
+  document.getElementById("itensVenda").innerHTML = "";
+  alert(`✅ Venda finalizada! Total R$ ${total.toFixed(2)}`);
 }
 
 // ---------------- Relatórios ----------------
-function relatorioPorMes() {
-  let mes = document.getElementById("mesFiltro").value;
-  let saida = document.getElementById("saidaRelatorios");
-  saida.innerHTML = `<h3>Relatório de ${mes}</h3>`;
+function relatorioClientes() {
+  let tot = {};
+  vendas.forEach(v => {
+    tot[v.cliente] = (tot[v.cliente] || 0) + v.total;
+  });
+  let out = "<h3>Vendas por Cliente</h3><ul>";
+  for (let c in tot) out += `<li>${c}: R$ ${tot[c].toFixed(2)}</li>`;
+  out += "</ul>";
+  document.getElementById("saidaRelatorios").innerHTML = out;
+}
 
-  let vendasMes = vendas.filter(v => v.data.startsWith(mes));
-  if (vendasMes.length === 0) {
-    saida.innerHTML += "<p>Nenhuma venda.</p>";
+function relatorioProdutos() {
+  let tot = {};
+  vendas.forEach(v => {
+    v.itens.forEach(i => {
+      tot[i.produto] = (tot[i.produto] || 0) + i.quantidade;
+    });
+  });
+  let out = "<h3>Produtos Mais Vendidos</h3><ul>";
+  for (let p in tot) out += `<li>${p}: ${tot[p]} unidades</li>`;
+  out += "</ul>";
+  document.getElementById("saidaRelatorios").innerHTML = out;
+}
+
+// ---------------- Exportar ----------------
+function exportarVendasExcel() {
+  if (vendas.length === 0) {
+    alert("⚠ Não há vendas para exportar!");
     return;
   }
 
-  vendasMes.forEach((v, idx) => {
-    let p = document.createElement("p");
-    p.textContent = `${idx+1}. ${v.data} - Cliente: ${v.cliente} - Total: R$ ${v.total.toFixed(2)}`;
-    saida.appendChild(p);
-  });
-}
-
-function exportarMesExcel() {
-  let mes = document.getElementById("mesFiltro").value;
-  let vendasMes = vendas.filter(v => v.data.startsWith(mes));
-  if (vendasMes.length === 0) { alert("Nenhuma venda."); return; }
-
   let dados = [];
-  vendasMes.forEach(v => {
-    v.itens.forEach(i => {
-      dados.push({ Data: v.data, Cliente: v.cliente, Produto: i.produto, Quantidade: i.quantidade, Subtotal: i.subtotal.toFixed(2), TotalVenda: v.total.toFixed(2) });
+  vendas.forEach((v, idx) => {
+    v.itens.forEach(item => {
+      dados.push({
+        Venda: idx + 1,
+        Cliente: v.cliente,
+        Produto: item.produto,
+        Quantidade: item.quantidade,
+        Subtotal: item.subtotal.toFixed(2),
+        TotalVenda: v.total.toFixed(2)
+      });
     });
   });
 
   let ws = XLSX.utils.json_to_sheet(dados);
   let wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, `Vendas_${mes}`);
-  XLSX.writeFile(wb, `vendas_${mes}.xlsx`);
+  XLSX.utils.book_append_sheet(wb, ws, "Vendas");
+  XLSX.writeFile(wb, "vendas.xlsx");
 }
 
-function exportarTodasVendas() {
-  let dados = [];
-  vendas.forEach(v => {
-    v.itens.forEach(i => {
-      dados.push({ Data: v.data, Cliente: v.cliente, Produto: i.produto, Quantidade: i.quantidade, Subtotal: i.subtotal.toFixed(2), TotalVenda: v.total.toFixed(2) });
-    });
-  });
-
-  let ws = XLSX.utils.json_to_sheet(dados);
-  let wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Todas_Vendas");
-  XLSX.writeFile(wb, "todas_vendas.xlsx");
-}
-
-function exportarClientes() {
-  let dados = [];
-  for (let nome in clientes) {
-    dados.push({ Nome: nome, CPF: clientes[nome].cpf, Telefone: clientes[nome].telefone });
+function exportarVendasPDF() {
+  if (vendas.length === 0) {
+    alert("⚠ Não há vendas para exportar!");
+    return;
   }
 
-  let ws = XLSX.utils.json_to_sheet(dados);
-  let wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Clientes");
-  XLSX.writeFile(wb, "clientes.xlsx");
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  doc.setFontSize(16);
+  doc.text("Relatório de Vendas", 14, 20);
+
+  let y = 30;
+  vendas.forEach((v, idx) => {
+    doc.setFontSize(12);
+    doc.text(`Venda #${idx + 1} - Cliente: ${v.cliente} - Total: R$ ${v.total.toFixed(2)}`, 14, y);
+    y += 8;
+    v.itens.forEach(item => {
+      doc.text(`   - ${item.produto} x${item.quantidade} = R$ ${item.subtotal.toFixed(2)}`, 20, y);
+      y += 6;
+    });
+    y += 4;
+    if (y > 270) {
+      doc.addPage();
+      y = 20;
+    }
+  });
+
+  doc.save("vendas.pdf");
 }
 
-// ---------------- Navegação ----------------
-function mostrarTela(id) {
-  document.querySelectorAll(".tela").forEach(sec => sec.classList.add("hidden"));
-  document.getElementById(id).classList.remove("hidden");
-}
-
+// ---------------- Inicialização ----------------
 window.addEventListener("load", () => {
-  document.getElementById("formCliente").addEventListener("submit", cadastrarCliente);
-  document.getElementById("formProduto").addEventListener("submit", cadastrarProduto);
-  document.getElementById("formVenda").addEventListener("submit", adicionarItem);
-  document.getElementById("btnFinalizarVenda").addEventListener("click", finalizarVenda);
+  carregarDados();
+  mostrarTela("produtos"); 
 
   document.getElementById("btnMenuProdutos").addEventListener("click", () => mostrarTela("produtos"));
   document.getElementById("btnMenuClientes").addEventListener("click", () => mostrarTela("clientes"));
   document.getElementById("btnMenuVendas").addEventListener("click", () => mostrarTela("vendas"));
   document.getElementById("btnMenuRelatorios").addEventListener("click", () => mostrarTela("relatorios"));
 
-  document.getElementById("btnRelatorioMes").addEventListener("click", relatorioPorMes);
-  document.getElementById("btnExportarMesExcel").addEventListener("click", exportarMesExcel);
-  document.getElementById("btnExportarVendasExcel").addEventListener("click", exportarTodasVendas);
-  document.getElementById("btnExportarClientesExcel").addEventListener("click", exportarClientes);
+  document.getElementById("btnFinalizarVenda").addEventListener("click", finalizarVenda);
+  document.getElementById("btnRelatorioClientes").addEventListener("click", relatorioClientes);
+  document.getElementById("btnRelatorioProdutos").addEventListener("click", relatorioProdutos);
+  document.getElementById("btnExportarVendas").addEventListener("click", exportarVendasExcel);
 
-  carregarClientes();
-  carregarProdutos();
-  carregarVendas();
-
-  mostrarTela("produtos");
+  let btnPDF = document.createElement("button");
+  btnPDF.textContent = "📄 Exportar Vendas (PDF)";
+  btnPDF.addEventListener("click", exportarVendasPDF);
+  document.getElementById("relatorios").appendChild(btnPDF);
 });
