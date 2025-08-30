@@ -2,102 +2,98 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Mercadinho Firebase</title>
+  <title>Mercadinho</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header>
-    <h1>🛒 Mercadinho Online</h1>
+    <h1>🛒 Mercadinho</h1>
     <nav>
-      <button id="btnMenuProdutos">Produtos</button>
-      <button id="btnMenuClientes">Clientes</button>
-      <button id="btnMenuVendas">Vendas</button>
-      <button id="btnMenuRelatorios">Relatórios</button>
-    </nav>
+  <button id="btnMenuProdutos">Produtos</button>
+  <button id="btnMenuClientes">Clientes</button>
+  <button id="btnMenuVendas">Vendas</button>
+  <button id="btnMenuRelatorios">Relatórios</button>
+     </nav>
   </header>
 
+  
+
   <main>
-    <!-- Produtos -->
-    <section id="produtos" class="tela hidden">
-      <h2>📦 Cadastro de Produtos</h2>
+    <!-- Tela de Produtos -->
+    <section id="produtos" class="tela">
+      <h2>📦 Produtos</h2>
       <form id="formProduto">
         <input id="codigoProduto" type="text" placeholder="Código" required>
         <input id="nomeProduto" type="text" placeholder="Nome" required>
-        <input id="precoProduto" type="number" step="0.01" placeholder="Preço" required>
-        <input id="quantidadeProduto" type="number" placeholder="Quantidade" required>
+        <input id="precoProduto" type="number" placeholder="Preço" step="0.01" required>
+        <input id="qtdProduto" type="number" placeholder="Quantidade" required>
         <button type="submit">Cadastrar Produto</button>
       </form>
       <h3>Lista de Produtos</h3>
-      <ul id="listaProdutos"></ul>
+      <table>
+        <thead>
+          <tr><th>Código</th><th>Nome</th><th>Preço</th><th>Estoque</th></tr>
+        </thead>
+        <tbody id="listaProdutos"></tbody>
+      </table>
+      <button id="btnExportarProdutos">Exportar Produtos (Excel)</button>
     </section>
 
-    <!-- Clientes -->
+    <!-- Tela de Clientes -->
     <section id="clientes" class="tela hidden">
-      <h2>👤 Cadastro de Clientes</h2>
+      <h2>👥 Clientes</h2>
       <form id="formCliente">
+        <input id="cpfCliente" type="text" placeholder="CPF/ID" required>
         <input id="nomeCliente" type="text" placeholder="Nome" required>
-        <input id="cpfCliente" type="text" placeholder="CPF/ID (opcional)">
-        <input id="telefoneCliente" type="text" placeholder="Telefone">
+        <input id="telCliente" type="text" placeholder="Telefone" required>
         <button type="submit">Cadastrar Cliente</button>
       </form>
       <h3>Lista de Clientes</h3>
-      <ul id="listaClientes"></ul>
+      <table>
+        <thead>
+          <tr><th>CPF</th><th>Nome</th><th>Telefone</th></tr>
+        </thead>
+        <tbody id="listaClientes"></tbody>
+      </table>
+      <button id="btnExportarClientes">Exportar Clientes (Excel)</button>
     </section>
 
-    <!-- Vendas -->
-    <section id="vendas" class="tela hidden">
-      <h2>📝 Registrar Venda</h2>
-      <form id="formVenda">
-        <input id="cpfVenda" type="text" placeholder="Nome do Cliente" required>
-        <input id="codigoVenda" type="text" placeholder="Código do Produto" required>
-        <input id="qtdVenda" type="number" placeholder="Quantidade" required>
-        <button type="submit">Adicionar Item</button>
-      </form>
+    <!-- Tela de Vendas -->
+<section id="vendas" class="tela hidden">
+  <h2>🧾 Registrar Venda</h2>
+  <form id="formVenda">
+    <input id="cpfVenda" type="text" placeholder="CPF do Cliente" required>
+    <input id="codigoVenda" type="text" placeholder="Código do Produto" required>
+    <input id="qtdVenda" type="number" placeholder="Quantidade" required>
+    <button type="submit">Adicionar Item</button>
+  </form>
+  <h3>Itens da Venda</h3>
+  <ul id="itensVenda"></ul>
+  <!-- ⚠️ Esse botão precisa ter ID e ser type="button" -->
+  <button id="btnFinalizarVenda" type="button">✅ Finalizar Venda</button>
+</section>
 
-      <h3>Itens da Venda</h3>
-      <ul id="itensVenda"></ul>
-      <button id="btnFinalizarVenda" type="button">✅ Finalizar Venda</button>
 
-      <h3>Histórico de Vendas</h3>
-      <ul id="listaVendas"></ul>
-    </section>
 
-    <!-- Relatórios -->
-    <section id="relatorios" class="tela hidden">
-      <h2>📊 Relatórios</h2>
-      <label for="mesFiltro">Filtrar por mês:</label>
-      <input type="month" id="mesFiltro">
-      <button id="btnRelatorioMes">Gerar Relatório do Mês</button>
-      <button id="btnExportarMesExcel">📥 Exportar Mês (Excel)</button>
-      <button id="btnExportarVendasExcel">📥 Exportar Todas Vendas</button>
-      <button id="btnExportarClientesExcel">📥 Exportar Clientes</button>
-      <div id="saidaRelatorios"></div>
-    </section>
-  </main>
+    <!-- Tela de Relatórios -->
+<section id="relatorios" class="tela hidden">
+  <h2>📊 Relatórios</h2>
+  <button id="btnRelatorioClientes">Vendas por Cliente</button>
+  <button id="btnRelatorioProdutos">Produtos Mais Vendidos</button>
+  <button id="btnExportarVendas">📑 Exportar Vendas (Excel)</button>
+  <div id="saidaRelatorios"></div>
+</section>
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
   <!-- SheetJS para Excel -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
-  <!-- Configuração Firebase -->
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyDj88eRI6nb4pHb4yu2V1waU-uPRrdhtfg",
-      authDomain: "lojinha-3704e.firebaseapp.com",
-      databaseURL: "https://lojinha-3704e-default-rtdb.firebaseio.com",
-      projectId: "lojinha-3704e",
-      storageBucket: "lojinha-3704e.firebasestorage.app",
-      messagingSenderId: "92547752472",
-      appId: "1:92547752472:web:4c8f8c8e627456bf74196d",
-      measurementId: "G-22Q75R5VMP"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-  </script>
+  <!-- jsPDF para PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
+  <!-- Seu script principal -->
   <script src="script.js"></script>
+
 </body>
 </html>
+

@@ -1,54 +1,109 @@
-body {
-  font-family: Arial, sans-serif;
+/* Reset */
+* {
   margin: 0;
   padding: 0;
-  background: #f8f9fa;
+  box-sizing: border-box;
+  font-family: "Segoe UI", sans-serif;
+}
+
+/* Layout */
+body {
+  background: #f4f6f9;
+  color: #333;
 }
 
 header {
-  background: #007bff;
+  background: #0077cc;
   color: white;
-  padding: 15px;
+  padding: 1rem;
   text-align: center;
 }
 
-nav {
-  margin-top: 10px;
+header h1 {
+  margin-bottom: 0.5rem;
 }
+
 nav button {
-  margin: 5px;
-  padding: 8px 12px;
-  background: white;
-  color: #007bff;
+  margin: 0.2rem;
+  padding: 0.5rem 1rem;
   border: none;
-  border-radius: 6px;
-  cursor: pointer;
+  background: white;
+  color: #0077cc;
   font-weight: bold;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: 0.2s;
 }
+
 nav button:hover {
-  background: #0056b3;
+  background: #005fa3;
   color: white;
 }
 
 main {
-  padding: 20px;
+  padding: 2rem;
 }
-.tela.hidden {
+
+.tela {
+  margin-top: 1rem;
+}
+
+.hidden {
   display: none;
 }
 
-/* Botão excluir */
-.btn-excluir {
-  background: #dc3545;
+/* Formulários */
+form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+form input, form button {
+  padding: 0.6rem;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+form button {
+  background: #28a745;
   color: white;
   border: none;
-  border-radius: 50%;
-  padding: 4px 8px;
-  margin-left: 10px;
   cursor: pointer;
-  font-weight: bold;
-  transition: 0.2s;
 }
-.btn-excluir:hover {
-  background: #a71d2a;
+
+form button:hover {
+  background: #218838;
+}
+
+/* Tabelas */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+  background: white;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+table th, table td {
+  border: 1px solid #ddd;
+  padding: 0.8rem;
+  text-align: center;
+}
+
+table th {
+  background: #0077cc;
+  color: white;
+}
+
+/* Relatórios */
+#saidaRelatorios {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
